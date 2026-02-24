@@ -1,4 +1,4 @@
-// First Install Docker
+# First Install Docker
 Using Docker installation file docker-install.sh
 chmod +x docker-install.sh
 
@@ -10,38 +10,40 @@ chmod +x docker-install.sh
  │    ├── server_models
  │    └── scripts
  └── Dockerfile
-//copy files to input directory
-#cp /path/to/*.pdf mydata/input_pdfs/
+#copy files to input directory
+cp /path/to/*.pdf mydata/input_pdfs/
 
-//make directory for work
-#mkdir -p ~/ocr_project/mydata/{input_pdfs,work_images,output_json,server_models,scripts}
-#cd ~/ocr_project
+#make directory for work
+mkdir -p ~/ocr_project/mydata/{input_pdfs,work_images,output_json,server_models,scripts}
+cd ~/ocr_project
 
-//add Dockerfile
-#vi ~/ocr_project/Dockerfile 
+#Add Dockerfile
+vi ~/ocr_project/Dockerfile 
 
-#docker rmi paddleocr-production
+docker rmi paddleocr-production
 
-#cd ~/ocr_project
-#docker build --no-cache -t paddleocr-production .
+cd ~/ocr_project
+docker build --no-cache -t paddleocr-production .
 
 
 
-//Run container:
-#cd ~/ocr_project/mydata
+#Run container:
+cd ~/ocr_project/mydata
 
 docker run -it --rm \
   -v $(pwd):/mydata \
   paddleocr-production
 
-#
+# Check Step is ok or not and init
 python - <<EOF
 import cv2
 import skimage
 from paddleocr import PaddleOCR
 print("Environment Fully Stable ✅")
 EOF
-//Now Paddle Ocr Setup Succesffully if it show Environment Fully Stable ✅
+# Now Paddle Ocr Setup Succesffully if it show Environment Fully Stable ✅
 
-//run python script
-#python /mydata/scripts/advanced_pdf_ocr.py
+# run python script
+python /mydata/scripts/advanced_pdf_ocr.py
+
+# After that push back to git repo .json output files
