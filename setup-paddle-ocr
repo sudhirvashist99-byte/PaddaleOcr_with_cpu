@@ -1,6 +1,22 @@
 // First Install Docker
 Using Docker installation file docker-install.sh
 chmod +x docker-install.sh
+
+/home/ubuntu/ocr_project
+ ├── mydata
+ │    ├── input_pdfs
+ │    ├── work_images
+ │    ├── output_json
+ │    ├── server_models
+ │    └── scripts
+ └── Dockerfile
+//copy files to input directory
+#cp /path/to/*.pdf mydata/input_pdfs/
+
+//make directory for work
+#mkdir -p ~/ocr_project/mydata/{input_pdfs,work_images,output_json,server_models,scripts}
+#cd ~/ocr_project
+
 //add Dockerfile
 #vi ~/ocr_project/Dockerfile 
 
@@ -8,6 +24,8 @@ chmod +x docker-install.sh
 
 #cd ~/ocr_project
 #docker build --no-cache -t paddleocr-production .
+
+
 
 //Run container:
 #cd ~/ocr_project/mydata
