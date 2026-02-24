@@ -10,27 +10,24 @@ INPUT_DIR = "/mydata/input_pdfs"
 IMAGE_DIR = "/mydata/work_images"
 OUTPUT_DIR = "/mydata/output_json"
 
-DET_MODEL = "/mydata/server_models/en_PP-OCRv4_det_server_infer"
-REC_MODEL = "/mydata/server_models/en_PP-OCRv4_rec_server_infer"
-
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# FORCE SERVER MODEL
+# ---------------- OPTIMIZED OCR CONFIG FOR OLD SCANNED DOCUMENTS
 ocr = PaddleOCR(
     use_gpu=False,
     lang="en",
     ocr_version="PP-OCRv4",
-    det_limit_side_len=1536,
-    det_db_thresh=0.2,
+    det_limit_side_len=960,
+    det_db_thresh=0.25,
     det_db_box_thresh=0.5,
     rec_batch_num=4,
     drop_score=0.4,
-    use_angle_cls=True,
+    use_angle_cls=False,
     show_log=False
 )
 
-# ---------------- PDF → Images (400 DPI + Grayscale)
+# ---------------- PDF → Images (300 DPI, NO forced grayscale)
 def convert_pdf(pdf_file):
     name = os.path.splitext(pdf_file)[0]
     pdf_path = os.path.join(INPUT_DIR, pdf_file)
@@ -39,51 +36,41 @@ def convert_pdf(pdf_file):
 
     subprocess.run([
         "pdftoppm",
-        "-gray",
         "-png",
-        "-r", "400",
+        "-r", "300",
         pdf_path,
         os.path.join(out_folder, "page")
     ])
 
-# ---------------- Deskew
-def deskew(image):
-    coords = cv2.findNonZero(255 - image)
-    angle = cv2.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = 90 + angle
-    (h, w) = image.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-    return cv2.warpAffine(image, M, (w, h),
-                          flags=cv2.INTER_CUBIC,
-                          borderMode=cv2.BORDER_REPLICATE)
-
-# ---------------- Preprocess
+# ---------------- ARCHIVAL PREPROCESS (CLAHE + LIGHT DENOISE)
 def preprocess(img_path):
     img = cv2.imread(img_path)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.adaptiveThreshold(
-        gray, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 31, 15
-    )
-    return deskew(thresh)
 
-# ---------------- OCR Single Page
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # CLAHE improves faded typewriter ink
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    enhanced = clahe.apply(gray)
+
+    # Light denoise
+    denoised = cv2.GaussianBlur(enhanced, (3,3), 0)
+
+    return denoised
+
+# ---------------- OCR SINGLE PAGE
 def ocr_page(args):
     img_path, pdf_name = args
+
     processed = preprocess(img_path)
     result = ocr.ocr(processed, cls=False)
 
     page_data = []
+
     if result and result[0]:
         for line in result[0]:
             text = line[1][0]
             conf = float(line[1][1])
 
-            # Basic post correction
-            text = text.replace("0", "O") if conf < 0.6 else text
             text = text.strip()
 
             page_data.append({
@@ -91,6 +78,7 @@ def ocr_page(args):
                 "confidence": conf,
                 "box": line[0]
             })
+
     return page_data
 
 # ---------------- MAIN PIPELINE
@@ -117,7 +105,6 @@ for pdf in os.listdir(INPUT_DIR):
             total=len(images)
         ))
 
-    # Merge pages into single JSON
     merged = {
         "document": pdf_name,
         "pages": results
