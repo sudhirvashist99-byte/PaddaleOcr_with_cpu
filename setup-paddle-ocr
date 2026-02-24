@@ -1,4 +1,29 @@
 // First Install Docker
 Using Docker installation file docker-install.sh
-//
+chmod +x docker-install.sh
+//add Dockerfile
+#vi ~/ocr_project/Dockerfile 
 
+#docker rmi paddleocr-production
+
+#cd ~/ocr_project
+#docker build --no-cache -t paddleocr-production .
+
+//Run container:
+#cd ~/ocr_project/mydata
+
+docker run -it --rm \
+  -v $(pwd):/mydata \
+  paddleocr-production
+
+#
+python - <<EOF
+import cv2
+import skimage
+from paddleocr import PaddleOCR
+print("Environment Fully Stable ✅")
+EOF
+//Now Paddle Ocr Setup Succesffully if it show Environment Fully Stable ✅
+
+//run python script
+#python /mydata/scripts/advanced_pdf_ocr.py
